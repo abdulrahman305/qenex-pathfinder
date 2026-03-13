@@ -9,14 +9,14 @@ description = "Security audit tool for Python codebases — CLI + MCP server"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
-dependencies = ["pyyaml>=6.0"]
+dependencies = ["pyyaml>=6.0", "mcp[cli]>=1.0"]
 
 [project.optional-dependencies]
-mcp = ["mcp[cli]>=1.0"]
 dev = ["pytest>=7.0", "pytest-cov"]
 
 [project.scripts]
 pathfinder = "pathfinder.cli:main"
+pathfinder-mcp = "pathfinder.mcp_server:run_server"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
