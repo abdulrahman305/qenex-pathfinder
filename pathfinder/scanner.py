@@ -1,5 +1,6 @@
 """Core scanner that orchestrates rules across a file tree."""
 
+import logging
 import os
 from fnmatch import fnmatch
 from typing import List, Optional, Set
@@ -7,6 +8,16 @@ from typing import List, Optional, Set
 from pathfinder.config import Config, DEFAULT_DOCKER_FILES, load_config
 from pathfinder.finding import Finding, Severity
 from pathfinder.rules import get_all_rules, BaseRule
+
+logger = logging.getLogger("pathfinder")
+
+
+def _exc_oneliner() -> str:
+    """Return a compact one-line description of the current exception."""
+    import sys
+
+    exc = sys.exc_info()[1]
+    return f"{type(exc).__name__}: {exc}" if exc else "unknown error"
 
 
 class Scanner:
@@ -68,9 +79,13 @@ class Scanner:
         """Scan a file or directory tree and return sorted findings."""
         path = os.path.abspath(path)
         findings: List[Finding] = []
+        files_scanned = 0
+
+        logger.info("Scanning %s with %d rules", path, len(self._rules))
 
         if os.path.isfile(path):
             findings.extend(self._scan_single_file(path))
+            files_scanned = 1
         elif os.path.isdir(path):
             for root, dirs, files in os.walk(path):
                 # Prune excluded directories in-place
@@ -84,8 +99,13 @@ class Scanner:
                     if not self._is_scannable(fpath):
                         continue
                     findings.extend(self._scan_single_file(fpath))
+                    files_scanned += 1
 
-        return self._filter_and_sort(findings)
+        results = self._filter_and_sort(findings)
+        logger.info(
+            "Scan complete: %d files scanned, %d findings", files_scanned, len(results)
+        )
+        return results
 
     def scan_file_content(self, content: str, filename: str) -> List[Finding]:
         """Scan in-memory content as if it were the given filename."""
@@ -95,8 +115,10 @@ class Scanner:
                 try:
                     findings.extend(rule.scan(filename, content))
                 except Exception:
-                    # A single rule failure should not abort the entire scan.
-                    pass
+                    logger.debug(
+                        "Rule %s failed on %s: %s",
+                        rule.rule_id, filename, _exc_oneliner(),
+                    )
         return self._filter_and_sort(findings)
 
     # ------------------------------------------------------------------
@@ -116,7 +138,10 @@ class Scanner:
                 try:
                     findings.extend(rule.scan(filepath, content))
                 except Exception:
-                    pass
+                    logger.debug(
+                        "Rule %s failed on %s: %s",
+                        rule.rule_id, filepath, _exc_oneliner(),
+                    )
         return findings
 
     def _filter_and_sort(self, findings: List[Finding]) -> List[Finding]:

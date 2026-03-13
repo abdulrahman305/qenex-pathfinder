@@ -1,6 +1,7 @@
 """Command-line interface for Pathfinder."""
 
 import argparse
+import logging
 import sys
 from typing import List, Optional
 
@@ -56,6 +57,12 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Start the MCP server instead of running a scan",
     )
     parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose output (rule failures, scan progress)",
+    )
+    parser.add_argument(
         "--version",
         action="version",
         version=f"pathfinder {__version__}",
@@ -66,6 +73,13 @@ def _build_parser() -> argparse.ArgumentParser:
 def main(argv: Optional[List[str]] = None) -> None:
     parser = _build_parser()
     args = parser.parse_args(argv)
+
+    # ---- Logging setup ----
+    logging.basicConfig(
+        format="%(levelname)s: %(message)s",
+        level=logging.DEBUG if args.verbose else logging.WARNING,
+        stream=sys.stderr,
+    )
 
     # ---- MCP mode ----
     if args.mcp:
