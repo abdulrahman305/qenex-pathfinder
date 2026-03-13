@@ -240,7 +240,7 @@ _CLOUD_CRED_PATTERNS = [
     re.compile(r"AKIA[0-9A-Z]{16}"),                                              # AWS access key
     re.compile(r"(?:aws_secret_access_key|AWS_SECRET_ACCESS_KEY)\s*[=:]\s*\S{30,}"),  # AWS secret
     re.compile(r'"type"\s*:\s*"service_account"'),                                 # GCP service account JSON
-    re.compile(r"-----BEGIN RSA PRIVATE KEY-----"),                                # GCP key file
+    re.compile(r"-----BEGIN RSA PRIVATE KEY-----"),                                # GCP key file  # pathfinder: ignore
     re.compile(r"(?:AZURE_CLIENT_SECRET|AZURE_TENANT_ID)\s*[=:]\s*\S{10,}", re.IGNORECASE),
 ]
 

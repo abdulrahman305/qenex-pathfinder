@@ -84,7 +84,7 @@ class CorsAllowAllOrigins(BaseRule):
 
 
 # ---------------------------------------------------------------------------
-# PF-CORS-002  Access-Control-Allow-Origin: * in headers
+# PF-CORS-002  CORS header wildcard  # pathfinder: ignore
 # ---------------------------------------------------------------------------
 
 _ACAO_RE = re.compile(

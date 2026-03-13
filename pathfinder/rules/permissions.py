@@ -64,6 +64,14 @@ _SECRET_FILE_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
+# Source code extensions are never secret files, even if their name matches.
+_SOURCE_CODE_EXTENSIONS = frozenset((
+    ".py", ".js", ".ts", ".jsx", ".tsx", ".go", ".rs", ".java",
+    ".rb", ".c", ".cpp", ".h", ".hpp", ".cs", ".kt", ".scala",
+    ".sh", ".bash", ".zsh", ".pl", ".lua", ".ex", ".exs", ".jl",
+    ".md", ".rst", ".txt", ".html", ".css",
+))
+
 
 @register_rule
 class SecretFilePermissions(BaseRule):
@@ -75,6 +83,9 @@ class SecretFilePermissions(BaseRule):
 
     def applies_to(self, filename: str) -> bool:
         basename = os.path.basename(filename)
+        _, ext = os.path.splitext(basename)
+        if ext.lower() in _SOURCE_CODE_EXTENSIONS:
+            return False
         return bool(_SECRET_FILE_PATTERNS.search(basename))
 
     def scan(self, filepath: str, content: str) -> List[Finding]:

@@ -168,6 +168,72 @@ class TestSelectedRules:
         assert all(f.rule_id != "PF-CMDI-002" for f in findings)
 
 
+class TestInlineSuppression:
+    """Tests for the # pathfinder: ignore inline suppression feature."""
+
+    def test_suppresses_finding_on_annotated_line(self):
+        content = textwrap.dedent("""\
+            import os
+            os.system("echo hello")  # pathfinder: ignore
+        """)
+        scanner = Scanner()
+        findings = scanner.scan_file_content(content, "deploy.py")
+        assert not any(f.rule_id == "PF-CMDI-002" for f in findings)
+
+    def test_does_not_suppress_unannotated_line(self):
+        content = textwrap.dedent("""\
+            import os
+            os.system("echo hello")
+        """)
+        scanner = Scanner()
+        findings = scanner.scan_file_content(content, "deploy.py")
+        assert any(f.rule_id == "PF-CMDI-002" for f in findings)
+
+    def test_suppresses_only_annotated_line_not_others(self):
+        content = textwrap.dedent("""\
+            import os
+            import hashlib
+            os.system("echo hello")  # pathfinder: ignore
+            h = hashlib.md5(b"data")
+        """)
+        scanner = Scanner()
+        findings = scanner.scan_file_content(content, "example.py")
+        rule_ids = {f.rule_id for f in findings}
+        assert "PF-CMDI-002" not in rule_ids
+        assert "PF-CRYP-001" in rule_ids
+
+    def test_suppression_works_on_file_scan(self, make_file):
+        path = make_file(
+            "deploy.py",
+            """\
+            import os
+            os.system("echo hello")  # pathfinder: ignore
+            """,
+        )
+        scanner = Scanner()
+        findings = scanner.scan_path(path)
+        assert not any(f.rule_id == "PF-CMDI-002" for f in findings)
+
+
+class TestPermSourceCodeExclusion:
+    """PF-PERM-002 should not flag source code files."""
+
+    def test_perm002_skips_python_source(self, make_file):
+        path = make_file("credentials.py", "x = 1\n")
+        scanner = Scanner(selected_rules=["PF-PERM-002"])
+        findings = scanner.scan_path(path)
+        assert len(findings) == 0
+
+    def test_perm002_still_flags_env_files(self, make_file):
+        path = make_file("secret.env", "DB_HOST=localhost\n")
+        import os
+        os.chmod(path, 0o644)
+        scanner = Scanner(selected_rules=["PF-PERM-002"])
+        findings = scanner.scan_path(path)
+        assert len(findings) == 1
+        assert findings[0].rule_id == "PF-PERM-002"
+
+
 class TestFindingSorting:
     def test_findings_sorted_by_severity_desc(self, make_file):
         path = make_file(

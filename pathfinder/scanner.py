@@ -12,6 +12,26 @@ from pathfinder.rules import get_all_rules, BaseRule
 logger = logging.getLogger("pathfinder")
 
 
+_SUPPRESS_MARKER = "pathfinder: ignore"
+
+
+def _apply_inline_suppressions(
+    findings: List[Finding], content: str
+) -> List[Finding]:
+    """Remove findings whose source line contains '# pathfinder: ignore'."""
+    if not findings:
+        return findings
+    lines = content.splitlines()
+    kept: List[Finding] = []
+    for f in findings:
+        idx = f.line_number - 1
+        if 0 <= idx < len(lines) and _SUPPRESS_MARKER in lines[idx]:
+            logger.debug("Suppressed %s on %s:%d via inline ignore", f.rule_id, f.file_path, f.line_number)
+            continue
+        kept.append(f)
+    return kept
+
+
 def _exc_oneliner() -> str:
     """Return a compact one-line description of the current exception."""
     import sys
@@ -119,6 +139,7 @@ class Scanner:
                         "Rule %s failed on %s: %s",
                         rule.rule_id, filename, _exc_oneliner(),
                     )
+        findings = _apply_inline_suppressions(findings, content)
         return self._filter_and_sort(findings)
 
     # ------------------------------------------------------------------
@@ -142,7 +163,7 @@ class Scanner:
                         "Rule %s failed on %s: %s",
                         rule.rule_id, filepath, _exc_oneliner(),
                     )
-        return findings
+        return _apply_inline_suppressions(findings, content)
 
     def _filter_and_sort(self, findings: List[Finding]) -> List[Finding]:
         if self.severity_filter is not None:
