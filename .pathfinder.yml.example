@@ -1,0 +1,13 @@
+exclude_paths:
+  - "vendor/"
+  - "node_modules/"
+  - ".venv/"
+min_severity: low
+exclude_rules: []
+extensions:
+  - ".py"
+  - ".service"
+  - ".yml"
+  - ".yaml"
+  - ".txt"
+  - ".toml"
